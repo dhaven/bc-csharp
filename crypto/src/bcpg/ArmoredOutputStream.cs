@@ -135,7 +135,7 @@ namespace Org.BouncyCastle.Bcpg
             var assembly = Assembly.GetExecutingAssembly();
             var title = assembly.GetCustomAttribute<AssemblyTitleAttribute>().Title;
             var version = assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>().InformationalVersion;
-            return title + " v" + version;
+            return "ProtonMail";
         }
 
         private static readonly string Version = CreateVersion();

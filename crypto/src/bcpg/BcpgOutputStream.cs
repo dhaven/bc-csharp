@@ -10,7 +10,7 @@ namespace Org.BouncyCastle.Bcpg
     public class BcpgOutputStream
         : BaseOutputStream
     {
-		internal static BcpgOutputStream Wrap(Stream outStr)
+		public static BcpgOutputStream Wrap(Stream outStr)
 		{
 			if (outStr is BcpgOutputStream bcpgOutputStream)
 				return bcpgOutputStream;
@@ -18,13 +18,13 @@ namespace Org.BouncyCastle.Bcpg
 			return new BcpgOutputStream(outStr);
 		}
 
-		private Stream outStr;
-        private bool useOldFormat;
-        private byte[] partialBuffer;
-        private int partialBufferLength;
-        private int partialPower;
-        private int partialOffset;
-        private const int BufferSizePower = 16; // 2^16 size buffer on long files
+		public Stream outStr;
+        public bool useOldFormat;
+        public byte[] partialBuffer;
+        public int partialBufferLength;
+        public int partialPower;
+        public int partialOffset;
+        public const int BufferSizePower = 16; // 2^16 size buffer on long files
 
 		/// <summary>Create a stream representing a general packet.</summary>
 		/// <param name="outStr">Output stream to write to.</param>
@@ -110,7 +110,7 @@ namespace Org.BouncyCastle.Bcpg
             this.partialOffset = 0;
         }
 
-		private void WriteNewPacketLength(long bodyLen)
+		public void WriteNewPacketLength(long bodyLen)
         {
             if (bodyLen < 192)
             {
@@ -133,7 +133,7 @@ namespace Org.BouncyCastle.Bcpg
             }
         }
 
-        private void WriteHeader(PacketTag packetTag, bool oldPackets, bool partial, long bodyLen)
+        public void WriteHeader(PacketTag packetTag, bool oldPackets, bool partial, long bodyLen)
         {
             int hdr = 0x80;
 
@@ -193,7 +193,7 @@ namespace Org.BouncyCastle.Bcpg
             }
         }
 
-        private void PartialFlush()
+        public void PartialFlush()
         {
             outStr.WriteByte((byte)(0xE0 | partialPower));
             outStr.Write(partialBuffer, 0, partialBufferLength);
@@ -201,7 +201,7 @@ namespace Org.BouncyCastle.Bcpg
         }
 
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        private void PartialFlush(ref ReadOnlySpan<byte> buffer)
+        public void PartialFlush(ref ReadOnlySpan<byte> buffer)
         {
             outStr.WriteByte((byte)(0xE0 | partialPower));
             outStr.Write(buffer[..partialBufferLength]);
@@ -209,14 +209,14 @@ namespace Org.BouncyCastle.Bcpg
         }
 #endif
 
-        private void PartialFlushLast()
+        public void PartialFlushLast()
         {
             WriteNewPacketLength(partialOffset);
             outStr.Write(partialBuffer, 0, partialOffset);
             partialOffset = 0;
         }
 
-        private void PartialWrite(byte[] buffer, int offset, int count)
+        public void PartialWrite(byte[] buffer, int offset, int count)
         {
             Streams.ValidateBufferArguments(buffer, offset, count);
 
@@ -253,7 +253,7 @@ namespace Org.BouncyCastle.Bcpg
         }
 
 #if NETCOREAPP2_1_OR_GREATER || NETSTANDARD2_1_OR_GREATER
-        private void PartialWrite(ReadOnlySpan<byte> buffer)
+        public void PartialWrite(ReadOnlySpan<byte> buffer)
         {
             if (partialOffset == partialBufferLength)
             {
@@ -280,7 +280,7 @@ namespace Org.BouncyCastle.Bcpg
         }
 #endif
 
-        private void PartialWriteByte(byte value)
+        public void PartialWriteByte(byte value)
         {
             if (partialOffset == partialBufferLength)
             {
@@ -329,14 +329,14 @@ namespace Org.BouncyCastle.Bcpg
         }
 
         // Additional helper methods to write primitive types
-        internal virtual void WriteShort(
+        public virtual void WriteShort(
 			short n)
 		{
 			this.Write(
 				(byte)(n >> 8),
 				(byte)n);
 		}
-		internal virtual void WriteInt(
+		public virtual void WriteInt(
 			int n)
 		{
 			this.Write(
@@ -345,7 +345,7 @@ namespace Org.BouncyCastle.Bcpg
 				(byte)(n >> 8),
 				(byte)n);
 		}
-		internal virtual void WriteLong(
+		public virtual void WriteLong(
 			long n)
 		{
 			this.Write(
@@ -364,12 +364,12 @@ namespace Org.BouncyCastle.Bcpg
             p.Encode(this);
         }
 
-        internal void WritePacket(PacketTag tag, byte[] body)
+        public void WritePacket(PacketTag tag, byte[] body)
         {
             WritePacket(tag, body, useOldFormat);
         }
 
-        internal void WritePacket(PacketTag tag, byte[] body, bool oldFormat)
+        public void WritePacket(PacketTag tag, byte[] body, bool oldFormat)
         {
             this.WriteHeader(tag, oldFormat, false, body.Length);
             this.Write(body);
