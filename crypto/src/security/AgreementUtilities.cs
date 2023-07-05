@@ -56,31 +56,30 @@ namespace Org.BouncyCastle.Security
 			throw new SecurityUtilityException("Basic Agreement " + algorithm + " not recognised.");
 		}
 
-		public static IBasicAgreement GetBasicAgreementWithKdf(
-			DerObjectIdentifier oid,
-			string				wrapAlgorithm)
+        public static IBasicAgreement GetBasicAgreementWithKdf(DerObjectIdentifier agreeAlgOid,
+			DerObjectIdentifier wrapAlgOid)
+        {
+            return GetBasicAgreementWithKdf(agreeAlgOid.Id, wrapAlgOid.Id);
+        }
+
+        public static IBasicAgreement GetBasicAgreementWithKdf(DerObjectIdentifier oid, string wrapAlgorithm)
 		{
 			return GetBasicAgreementWithKdf(oid.Id, wrapAlgorithm);
 		}
 
-		public static IBasicAgreement GetBasicAgreementWithKdf(
-			string agreeAlgorithm,
-			string wrapAlgorithm)
+		public static IBasicAgreement GetBasicAgreementWithKdf(string agreeAlgorithm, string wrapAlgorithm)
 		{
             string mechanism = GetMechanism(agreeAlgorithm);
 
             // 'DHWITHSHA1KDF' retained for backward compatibility
 			if (mechanism == "DHWITHSHA1KDF" || mechanism == "ECDHWITHSHA1KDF")
-				return new ECDHWithKdfBasicAgreement(
-					wrapAlgorithm,
-					new ECDHKekGenerator(
-						new Sha1Digest()));
+				return new ECDHWithKdfBasicAgreement(wrapAlgorithm, new ECDHKekGenerator(new Sha1Digest()));
+
+			if (mechanism == "ECCDHWITHSHA1KDF")
+				return new ECDHCWithKdfBasicAgreement(wrapAlgorithm, new ECDHKekGenerator(new Sha1Digest()));
 
 			if (mechanism == "ECMQVWITHSHA1KDF")
-				return new ECMqvWithKdfBasicAgreement(
-					wrapAlgorithm,
-					new ECDHKekGenerator(
-						new Sha1Digest()));
+				return new ECMqvWithKdfBasicAgreement(wrapAlgorithm, new ECDHKekGenerator(new Sha1Digest()));
 
 			throw new SecurityUtilityException("Basic Agreement (with KDF) " + agreeAlgorithm + " not recognised.");
 		}

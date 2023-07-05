@@ -25,14 +25,21 @@ namespace Org.BouncyCastle.Pkcs
         private readonly Dictionary<string, string> m_localIds = new Dictionary<string, string>();
         private readonly Dictionary<string, X509CertificateEntry> m_certs =
             new Dictionary<string, X509CertificateEntry>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<CertId, X509CertificateEntry> m_chainCerts =
-            new Dictionary<CertId, X509CertificateEntry>();
+        private readonly Dictionary<CertID, X509CertificateEntry> m_chainCerts =
+            new Dictionary<CertID, X509CertificateEntry>();
         private readonly Dictionary<string, X509CertificateEntry> m_keyCerts =
             new Dictionary<string, X509CertificateEntry>();
+        private readonly List<string> m_keysOrder =
+            new List<string>();
+        private readonly List<string> m_certsOrder =
+            new List<string>();
+        private readonly List<CertID> m_chainCertOrder =
+            new List<CertID>();
         private readonly DerObjectIdentifier keyAlgorithm;
         private readonly DerObjectIdentifier keyPrfAlgorithm;
         private readonly DerObjectIdentifier certAlgorithm;
         private readonly bool useDerEncoding;
+        private readonly bool isReverse;
 
         private AsymmetricKeyEntry unmarkedKeyEntry = null;
 
@@ -45,54 +52,43 @@ namespace Org.BouncyCastle.Pkcs
                 SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(pubKey));
         }
 
-        internal class CertId
+        internal struct CertID
+            : IEquatable<CertID>
         {
-            private readonly byte[] id;
+            private readonly byte[] m_id;
 
-            internal CertId(
-                AsymmetricKeyParameter pubKey)
+            internal CertID(X509CertificateEntry certEntry)
+                : this(certEntry.Certificate)
             {
-                this.id = CreateSubjectKeyID(pubKey).GetKeyIdentifier();
             }
 
-            internal CertId(
-                byte[] id)
+            internal CertID(X509Certificate cert)
+                : this(CreateSubjectKeyID(cert.GetPublicKey()).GetKeyIdentifier())
             {
-                this.id = id;
             }
 
-            internal byte[] Id
+            internal CertID(byte[] id)
             {
-                get { return id; }
+                m_id = id;
             }
 
-            public override int GetHashCode()
-            {
-                return Arrays.GetHashCode(id);
-            }
+            internal byte[] ID => m_id;
 
-            public override bool Equals(
-                object obj)
-            {
-                if (obj == this)
-                    return true;
+            public bool Equals(CertID other) => Arrays.AreEqual(m_id, other.m_id);
 
-                CertId other = obj as CertId;
+            public override bool Equals(object obj) => obj is CertID other && Equals(other);
 
-                if (other == null)
-                    return false;
-
-                return Arrays.AreEqual(id, other.id);
-            }
+            public override int GetHashCode() => Arrays.GetHashCode(m_id);
         }
 
         internal Pkcs12Store(DerObjectIdentifier keyAlgorithm, DerObjectIdentifier keyPrfAlgorithm,
-            DerObjectIdentifier certAlgorithm, bool useDerEncoding)
+            DerObjectIdentifier certAlgorithm, bool useDerEncoding, bool isReverse)
         {
             this.keyAlgorithm = keyAlgorithm;
             this.keyPrfAlgorithm = keyPrfAlgorithm;
             this.certAlgorithm = certAlgorithm;
             this.useDerEncoding = useDerEncoding;
+            this.isReverse = isReverse;
         }
 
         protected virtual void LoadKeyBag(PrivateKeyInfo privKeyInfo, Asn1Set bagAttributes)
@@ -136,6 +132,7 @@ namespace Org.BouncyCastle.Pkcs
                             alias = ((DerBmpString)attr).GetString();
                             // TODO Do these in a separate loop, just collect aliases here
                             m_keys[alias] = keyEntry;
+                            m_keysOrder.Add(alias);
                         }
                         else if (aOid.Equals(PkcsObjectIdentifiers.Pkcs9AtLocalKeyID))
                         {
@@ -152,6 +149,7 @@ namespace Org.BouncyCastle.Pkcs
                 if (alias == null)
                 {
                     m_keys[name] = keyEntry;
+                    m_keysOrder.Add(name);
                 }
                 else
                 {
@@ -228,6 +226,7 @@ namespace Org.BouncyCastle.Pkcs
             }
 
             m_keys.Clear();
+            m_keysOrder.Clear();
             m_localIds.Clear();
             unmarkedKeyEntry = null;
 
@@ -295,7 +294,9 @@ namespace Org.BouncyCastle.Pkcs
             m_certs.Clear();
             m_chainCerts.Clear();
             m_keyCerts.Clear();
-
+            m_certsOrder.Clear();
+            m_chainCertOrder.Clear();
+            
             foreach (SafeBag b in certBags)
             {
                 CertBag certBag = CertBag.GetInstance(b.BagValue);
@@ -356,16 +357,18 @@ namespace Org.BouncyCastle.Pkcs
                     }
                 }
 
-                CertId certId = new CertId(cert.GetPublicKey());
+                CertID certID = new CertID(cert);
                 X509CertificateEntry certEntry = new X509CertificateEntry(cert, attributes);
 
-                m_chainCerts[certId] = certEntry;
+                m_chainCerts[certID] = certEntry;
+                m_chainCertOrder.Add(certID);
+                // m_certOrder.Add(certID);
 
                 if (unmarkedKeyEntry != null)
                 {
                     if (m_keyCerts.Count == 0)
                     {
-                        string name = Hex.ToHexString(certId.Id);
+                        string name = Hex.ToHexString(certID.ID);
 
                         m_keyCerts[name] = certEntry;
                         m_keys[name] = unmarkedKeyEntry;
@@ -388,6 +391,7 @@ namespace Org.BouncyCastle.Pkcs
                     {
                         // TODO There may have been more than one alias
                         m_certs[alias] = certEntry;
+                        m_certsOrder.Add(alias);
                     }
                 }
             }
@@ -502,7 +506,7 @@ namespace Org.BouncyCastle.Pkcs
                     byte[] keyID = aki.GetKeyIdentifier();
                     if (keyID != null)
                     {
-                        nextC = CollectionUtilities.GetValueOrNull(m_chainCerts, new CertId(keyID));
+                        nextC = CollectionUtilities.GetValueOrNull(m_chainCerts, new CertID(keyID));
                     }
                 }
 
@@ -562,7 +566,7 @@ namespace Org.BouncyCastle.Pkcs
                 throw new ArgumentException("There is a key entry with the name " + alias + ".");
 
             m_certs[alias] = certEntry;
-            m_chainCerts[new CertId(certEntry.Certificate.GetPublicKey())] = certEntry;
+            m_chainCerts[new CertID(certEntry)] = certEntry;
         }
 
         public void SetKeyEntry(string alias, AsymmetricKeyEntry keyEntry, X509CertificateEntry[] chain)
@@ -571,7 +575,7 @@ namespace Org.BouncyCastle.Pkcs
                 throw new ArgumentNullException(nameof(alias));
             if (keyEntry == null)
                 throw new ArgumentNullException(nameof(keyEntry));
-            if (keyEntry.Key.IsPrivate && chain == null)
+            if (keyEntry.Key.IsPrivate && Arrays.IsNullOrEmpty(chain))
                 throw new ArgumentException("No certificate chain for private key");
 
             if (m_keys.ContainsKey(alias))
@@ -580,11 +584,18 @@ namespace Org.BouncyCastle.Pkcs
             }
 
             m_keys[alias] = keyEntry;
-            m_certs[alias] = chain[0];
+            m_keysOrder.Add(alias);
 
-            for (int i = 0; i != chain.Length; i++)
+            if (chain.Length > 0)
             {
-                m_chainCerts[new CertId(chain[i].Certificate.GetPublicKey())] = chain[i];
+                m_certs[alias] = chain[0];
+                m_certsOrder.Add(alias);
+                foreach (var certificateEntry in chain)
+                {
+                    CertID certId = new CertID(certificateEntry);
+                    m_chainCerts[certId] = certificateEntry;
+                    m_chainCertOrder.Add(certId);
+                }
             }
         }
 
@@ -593,18 +604,24 @@ namespace Org.BouncyCastle.Pkcs
             if (alias == null)
                 throw new ArgumentNullException(nameof(alias));
 
-            if (CollectionUtilities.Remove(m_certs, alias, out var cert))
+            if (CollectionUtilities.Remove(m_certs, alias, out var certEntry))
             {
-                m_chainCerts.Remove(new CertId(cert.Certificate.GetPublicKey()));
+                CertID certId = new CertID(certEntry);
+                m_chainCerts.Remove(certId);
+                m_chainCertOrder.Remove(certId);
+                m_certsOrder.Remove(alias);
             }
 
             if (m_keys.Remove(alias))
             {
+                m_keys.Remove(alias);
                 if (CollectionUtilities.Remove(m_localIds, alias, out var id))
                 {
-                    if (CollectionUtilities.Remove(m_keyCerts, id, out var keyCert))
+                    if (CollectionUtilities.Remove(m_keyCerts, id, out var keyCertEntry))
                     {
-                        m_chainCerts.Remove(new CertId(keyCert.Certificate.GetPublicKey()));
+                        CertID certId = new CertID(certEntry);
+                        m_chainCertOrder.Remove(certId);
+                        m_chainCerts.Remove(certId);
                     }
                 }
             }
@@ -650,10 +667,12 @@ namespace Org.BouncyCastle.Pkcs
             // handle the keys
             //
             Asn1EncodableVector keyBags = new Asn1EncodableVector(m_keys.Count);
-            foreach (var keyEntry in m_keys)
+            for (uint i = isReverse ? (uint)m_keysOrder.Count-1 : 0;
+                 i < m_keysOrder.Count;
+                 i = isReverse ? i-1 : i+1)
             {
-                var name = keyEntry.Key;
-                var privKey = keyEntry.Value;
+                var name = m_keysOrder[(int)i];
+                var privKey = m_keys[name];
 
                 byte[] kSalt = new byte[SaltSize];
                 random.NextBytes(kSalt);
@@ -737,8 +756,11 @@ namespace Org.BouncyCastle.Pkcs
             AlgorithmIdentifier cAlgId = new AlgorithmIdentifier(certAlgorithm, cParams.ToAsn1Object());
             var doneCerts = new HashSet<X509Certificate>();
 
-            foreach (string name in m_keys.Keys)
+            for (uint i = isReverse ? (uint)m_keysOrder.Count-1 : 0;
+                 i < m_keysOrder.Count;
+                 i = isReverse ? i-1 : i+1)
             {
+                String name = m_keysOrder[(int)i];
                 X509CertificateEntry certEntry = GetCertificate(name);
                 CertBag cBag = new CertBag(
                     PkcsObjectIdentifiers.X509Certificate,
@@ -785,11 +807,16 @@ namespace Org.BouncyCastle.Pkcs
 
                 doneCerts.Add(certEntry.Certificate);
             }
-
-            foreach (var certEntry in m_certs)
+            
+            // foreach (var certEntry in m_certs)
+            for (uint j = isReverse ? (uint)m_certsOrder.Count-1 : 0;
+                 j < m_certsOrder.Count;
+                 j = isReverse ? j-1 : j+1)
             {
-                var certId = certEntry.Key;
-                var cert = certEntry.Value;
+                var certId = m_certsOrder[(int)j];
+                var cert = m_certs[certId];
+                // var certId = certEntry.Key;
+                // var cert = certEntry.Value;
 
                 if (m_keys.ContainsKey(certId))
                     continue;
@@ -861,11 +888,16 @@ namespace Org.BouncyCastle.Pkcs
 
                 doneCerts.Add(cert.Certificate);
             }
-
-            foreach (var chainCertEntry in m_chainCerts)
+            
+            // foreach (var chainCertEntry in m_chainCerts)
+            for (uint i = isReverse ? (uint)m_chainCertOrder.Count-1 : 0;
+                 i < m_chainCertOrder.Count;
+                 i = isReverse ? i-1 : i+1)
             {
-                var certId = chainCertEntry.Key;
-                var cert = chainCertEntry.Value;
+                var certId = m_chainCertOrder[(int)i];
+                var cert = m_chainCerts[certId];
+                // var certId = chainCertEntry.Key;
+                // var cert = chainCertEntry.Value;
 
                 if (doneCerts.Contains(cert.Certificate))
                     continue;

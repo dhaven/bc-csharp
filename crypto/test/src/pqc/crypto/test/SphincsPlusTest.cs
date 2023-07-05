@@ -16,9 +16,6 @@ using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.Utilities.Test;
 
-using PqcPrivateKeyFactory = Org.BouncyCastle.Pqc.Crypto.Utilities.PqcPrivateKeyFactory;
-using PqcPublicKeyFactory = Org.BouncyCastle.Pqc.Crypto.Utilities.PqcPublicKeyFactory;
-
 namespace Org.BouncyCastle.Pqc.Crypto.Tests
 {
     [TestFixture]
@@ -455,6 +452,15 @@ namespace Org.BouncyCastle.Pqc.Crypto.Tests
 
             SphincsPlusPublicKeyParameters pubParams = (SphincsPlusPublicKeyParameters)kp.Public;
             SphincsPlusPrivateKeyParameters privParams = (SphincsPlusPrivateKeyParameters)kp.Private;
+
+            // FIXME No OIDs for simple variants of SPHINCS+
+            if (!name.Contains("-simple"))
+            {
+                pubParams = (SphincsPlusPublicKeyParameters)PqcPublicKeyFactory.CreateKey(
+                    PqcSubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(pubParams));
+                privParams = (SphincsPlusPrivateKeyParameters)PqcPrivateKeyFactory.CreateKey(
+                    PqcPrivateKeyInfoFactory.CreatePrivateKeyInfo(privParams));
+            }
 
             Assert.True(Arrays.AreEqual(Arrays.Concatenate(pubParams.Parameters.GetEncoded(), pk), pubParams.GetEncoded()), name + " " + count + ": public key");
             Assert.True(Arrays.AreEqual(Arrays.Concatenate(privParams.Parameters.GetEncoded(), sk), privParams.GetEncoded()), name + " " + count + ": secret key");

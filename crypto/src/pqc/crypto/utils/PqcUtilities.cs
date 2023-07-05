@@ -7,11 +7,13 @@ using Org.BouncyCastle.Pqc.Crypto.Cmce;
 using Org.BouncyCastle.Pqc.Crypto.Crystals.Dilithium;
 using Org.BouncyCastle.Pqc.Crypto.Crystals.Kyber;
 using Org.BouncyCastle.Pqc.Crypto.Falcon;
+using Org.BouncyCastle.Pqc.Crypto.Frodo;
 using Org.BouncyCastle.Pqc.Crypto.Hqc;
 using Org.BouncyCastle.Pqc.Crypto.Picnic;
 using Org.BouncyCastle.Pqc.Crypto.Saber;
 using Org.BouncyCastle.Pqc.Crypto.Sike;
 using Org.BouncyCastle.Pqc.Crypto.SphincsPlus;
+using Org.BouncyCastle.Utilities.Collections;
 
 namespace Org.BouncyCastle.Pqc.Crypto.Utilities
 {
@@ -19,7 +21,10 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
     {
         private readonly static Dictionary<CmceParameters, DerObjectIdentifier> mcElieceOids = new Dictionary<CmceParameters, DerObjectIdentifier>();
         private readonly static Dictionary<DerObjectIdentifier, CmceParameters> mcElieceParams = new Dictionary<DerObjectIdentifier, CmceParameters>();
-        
+
+        private readonly static Dictionary<FrodoParameters, DerObjectIdentifier> frodoOids = new Dictionary<FrodoParameters, DerObjectIdentifier>();
+        private readonly static Dictionary<DerObjectIdentifier, FrodoParameters> frodoParams = new Dictionary<DerObjectIdentifier, FrodoParameters>();
+
         private readonly static Dictionary<SaberParameters, DerObjectIdentifier> saberOids = new Dictionary<SaberParameters, DerObjectIdentifier>();
         private readonly static Dictionary<DerObjectIdentifier, SaberParameters> saberParams = new Dictionary<DerObjectIdentifier, SaberParameters>();
 
@@ -46,6 +51,9 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
         private readonly static Dictionary<HqcParameters, DerObjectIdentifier> hqcOids = new Dictionary<HqcParameters, DerObjectIdentifier>();
         private readonly static Dictionary<DerObjectIdentifier, HqcParameters> hqcParams = new Dictionary<DerObjectIdentifier, HqcParameters>();
 
+        private readonly static Dictionary<SphincsPlusParameters, DerObjectIdentifier> sphincsPlusOids = new Dictionary<SphincsPlusParameters, DerObjectIdentifier>();
+        private readonly static Dictionary<DerObjectIdentifier, SphincsPlusParameters> sphincsPlusParams = new Dictionary<DerObjectIdentifier, SphincsPlusParameters>();
+
         static PqcUtilities()
         {
             // CMCE
@@ -70,7 +78,21 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
             mcElieceParams[BCObjectIdentifiers.mceliece6960119f_r3] = CmceParameters.mceliece6960119fr3;
             mcElieceParams[BCObjectIdentifiers.mceliece8192128_r3] = CmceParameters.mceliece8192128r3;
             mcElieceParams[BCObjectIdentifiers.mceliece8192128f_r3] = CmceParameters.mceliece8192128fr3;
-            
+
+            frodoOids[FrodoParameters.frodokem640aes] = BCObjectIdentifiers.frodokem640aes;
+            frodoOids[FrodoParameters.frodokem640shake] = BCObjectIdentifiers.frodokem640shake;
+            frodoOids[FrodoParameters.frodokem976aes] = BCObjectIdentifiers.frodokem976aes;
+            frodoOids[FrodoParameters.frodokem976shake] = BCObjectIdentifiers.frodokem976shake;
+            frodoOids[FrodoParameters.frodokem1344aes] = BCObjectIdentifiers.frodokem1344aes;
+            frodoOids[FrodoParameters.frodokem1344shake] = BCObjectIdentifiers.frodokem1344shake;
+
+            frodoParams[BCObjectIdentifiers.frodokem640aes] = FrodoParameters.frodokem640aes;
+            frodoParams[BCObjectIdentifiers.frodokem640shake] = FrodoParameters.frodokem640shake;
+            frodoParams[BCObjectIdentifiers.frodokem976aes] = FrodoParameters.frodokem976aes;
+            frodoParams[BCObjectIdentifiers.frodokem976shake] = FrodoParameters.frodokem976shake;
+            frodoParams[BCObjectIdentifiers.frodokem1344aes] = FrodoParameters.frodokem1344aes;
+            frodoParams[BCObjectIdentifiers.frodokem1344shake] = FrodoParameters.frodokem1344shake;
+
             saberOids[SaberParameters.lightsaberkem128r3] = BCObjectIdentifiers.lightsaberkem128r3;
             saberOids[SaberParameters.saberkem128r3] = BCObjectIdentifiers.saberkem128r3;
             saberOids[SaberParameters.firesaberkem128r3] = BCObjectIdentifiers.firesaberkem128r3;
@@ -205,104 +227,156 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
             hqcOids[HqcParameters.hqc128] = BCObjectIdentifiers.hqc128;
             hqcOids[HqcParameters.hqc192] = BCObjectIdentifiers.hqc192;
             hqcOids[HqcParameters.hqc256] = BCObjectIdentifiers.hqc256;
+
+            sphincsPlusOids[SphincsPlusParameters.sha2_128s] = BCObjectIdentifiers.sphincsPlus_sha2_128s_r3;
+            sphincsPlusOids[SphincsPlusParameters.sha2_128f] = BCObjectIdentifiers.sphincsPlus_sha2_128f_r3;
+            sphincsPlusOids[SphincsPlusParameters.shake_128s] = BCObjectIdentifiers.sphincsPlus_shake_128s_r3;
+            sphincsPlusOids[SphincsPlusParameters.shake_128f] = BCObjectIdentifiers.sphincsPlus_shake_128f_r3;
+            sphincsPlusOids[SphincsPlusParameters.haraka_128s] = BCObjectIdentifiers.sphincsPlus_haraka_128s_r3;
+            sphincsPlusOids[SphincsPlusParameters.haraka_128f] = BCObjectIdentifiers.sphincsPlus_haraka_128f_r3;
+            sphincsPlusOids[SphincsPlusParameters.sha2_192s] = BCObjectIdentifiers.sphincsPlus_sha2_192s_r3;
+            sphincsPlusOids[SphincsPlusParameters.sha2_192f] = BCObjectIdentifiers.sphincsPlus_sha2_192f_r3;
+            sphincsPlusOids[SphincsPlusParameters.shake_192s] = BCObjectIdentifiers.sphincsPlus_shake_192s_r3;
+            sphincsPlusOids[SphincsPlusParameters.shake_192f] = BCObjectIdentifiers.sphincsPlus_shake_192f_r3;
+            sphincsPlusOids[SphincsPlusParameters.haraka_192s] = BCObjectIdentifiers.sphincsPlus_haraka_192s_r3;
+            sphincsPlusOids[SphincsPlusParameters.haraka_192f] = BCObjectIdentifiers.sphincsPlus_haraka_192f_r3;
+            sphincsPlusOids[SphincsPlusParameters.sha2_256s] = BCObjectIdentifiers.sphincsPlus_sha2_256s_r3;
+            sphincsPlusOids[SphincsPlusParameters.sha2_256f] = BCObjectIdentifiers.sphincsPlus_sha2_256f_r3;
+            sphincsPlusOids[SphincsPlusParameters.shake_256s] = BCObjectIdentifiers.sphincsPlus_shake_256s_r3;
+            sphincsPlusOids[SphincsPlusParameters.shake_256f] = BCObjectIdentifiers.sphincsPlus_shake_256f_r3;
+            sphincsPlusOids[SphincsPlusParameters.haraka_256s] = BCObjectIdentifiers.sphincsPlus_haraka_256s_r3;
+            sphincsPlusOids[SphincsPlusParameters.haraka_256f] = BCObjectIdentifiers.sphincsPlus_haraka_256f_r3;
+
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_sha2_128s_r3] = SphincsPlusParameters.sha2_128s;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_sha2_128f_r3] = SphincsPlusParameters.sha2_128f;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_shake_128s_r3] = SphincsPlusParameters.shake_128s;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_shake_128f_r3] = SphincsPlusParameters.shake_128f;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_haraka_128s_r3] = SphincsPlusParameters.haraka_128s;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_haraka_128f_r3] = SphincsPlusParameters.haraka_128f;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_sha2_192s_r3] = SphincsPlusParameters.sha2_192s;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_sha2_192f_r3] = SphincsPlusParameters.sha2_192f;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_shake_192s_r3] = SphincsPlusParameters.shake_192s;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_shake_192f_r3] = SphincsPlusParameters.shake_192f;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_haraka_192s_r3] = SphincsPlusParameters.haraka_192s;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_haraka_192f_r3] = SphincsPlusParameters.haraka_192f;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_sha2_256s_r3] = SphincsPlusParameters.sha2_256s;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_sha2_256f_r3] = SphincsPlusParameters.sha2_256f;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_shake_256s_r3] = SphincsPlusParameters.shake_256s;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_shake_256f_r3] = SphincsPlusParameters.shake_256f;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_haraka_256s_r3] = SphincsPlusParameters.haraka_256s;
+            sphincsPlusParams[BCObjectIdentifiers.sphincsPlus_haraka_256f_r3] = SphincsPlusParameters.haraka_256f;
         }
 
         internal static DerObjectIdentifier McElieceOidLookup(CmceParameters parameters)
         {
-            return mcElieceOids[parameters];
+            return CollectionUtilities.GetValueOrNull(mcElieceOids, parameters);
         }
 
         internal static CmceParameters McElieceParamsLookup(DerObjectIdentifier oid)
         {
-            return mcElieceParams[oid];
+            return CollectionUtilities.GetValueOrNull(mcElieceParams, oid);
         }
-        
+
+        internal static DerObjectIdentifier FrodoOidLookup(FrodoParameters parameters)
+        {
+            return CollectionUtilities.GetValueOrNull(frodoOids, parameters);
+        }
+
+        internal static FrodoParameters FrodoParamsLookup(DerObjectIdentifier oid)
+        {
+            return CollectionUtilities.GetValueOrNull(frodoParams, oid);
+        }
+
         internal static DerObjectIdentifier SaberOidLookup(SaberParameters parameters)
         {
-            return saberOids[parameters];
+            return CollectionUtilities.GetValueOrNull(saberOids, parameters);
         }
+
         internal static SaberParameters SaberParamsLookup(DerObjectIdentifier oid)
         {
-            return saberParams[oid];
+            return CollectionUtilities.GetValueOrNull(saberParams, oid);
         }
+
         internal static KyberParameters KyberParamsLookup(DerObjectIdentifier oid)
         {
-            return kyberParams[oid];
-        }       
+            return CollectionUtilities.GetValueOrNull(kyberParams, oid);
+        }
+
         internal static DerObjectIdentifier KyberOidLookup(KyberParameters parameters)
         {
-            return kyberOids[parameters];
+            return CollectionUtilities.GetValueOrNull(kyberOids, parameters);
         }
+
         internal static FalconParameters FalconParamsLookup(DerObjectIdentifier oid)
         {
-            return falconParams[oid];
+            return CollectionUtilities.GetValueOrNull(falconParams, oid);
         }       
+
         internal static DerObjectIdentifier FalconOidLookup(FalconParameters parameters)
         {
-            return falconOids[parameters];
+            return CollectionUtilities.GetValueOrNull(falconOids, parameters);
         }
+
         internal static DilithiumParameters DilithiumParamsLookup(DerObjectIdentifier oid)
         {
-            return dilithiumParams[oid];
-        }       
-        internal static DerObjectIdentifier DilithiumOidLookup(DilithiumParameters parameters)
-        {
-            return dilithiumOids[parameters];
+            return CollectionUtilities.GetValueOrNull(dilithiumParams, oid);
         }
 
-        internal static DerObjectIdentifier SphincsPlusOidLookup(SphincsPlusParameters parameters)
+        internal static DerObjectIdentifier DilithiumOidLookup(DilithiumParameters parameters)
         {
-            int pId = SphincsPlusParameters.GetID(parameters);
-
-            if ((pId & 0x020000) == 0x020000)
-                return BCObjectIdentifiers.sphincsPlus_shake_256;
-
-            if ((pId & 0x05) == 0x05 || (pId & 0x06) == 0x06)
-                return BCObjectIdentifiers.sphincsPlus_sha_512;
-
-            return BCObjectIdentifiers.sphincsPlus_sha_256;
+            return CollectionUtilities.GetValueOrNull(dilithiumOids, parameters);
         }
 
         internal static DerObjectIdentifier PicnicOidLookup(PicnicParameters parameters)
         {
-            return picnicOids[parameters];
+            return CollectionUtilities.GetValueOrNull(picnicOids, parameters);
         }
 
         internal static PicnicParameters PicnicParamsLookup(DerObjectIdentifier oid)
         {
-            return picnicParams[oid];
+            return CollectionUtilities.GetValueOrNull(picnicParams, oid);
         }
 
 #pragma warning disable CS0618 // Type or member is obsolete
         internal static DerObjectIdentifier SikeOidLookup(SikeParameters parameters)
         {
-            return sikeOids[parameters];
+            return CollectionUtilities.GetValueOrNull(sikeOids, parameters);
         }
 
         internal static SikeParameters SikeParamsLookup(DerObjectIdentifier oid)
         {
-            return sikeParams[oid];
+            return CollectionUtilities.GetValueOrNull(sikeParams, oid);
         }
 #pragma warning restore CS0618 // Type or member is obsolete
 
         internal static DerObjectIdentifier BikeOidLookup(BikeParameters parameters)
         {
-            return bikeOids[parameters];
+            return CollectionUtilities.GetValueOrNull(bikeOids, parameters);
         }
 
         internal static BikeParameters BikeParamsLookup(DerObjectIdentifier oid)
         {
-            return bikeParams[oid];
+            return CollectionUtilities.GetValueOrNull(bikeParams, oid);
         }
 
         internal static DerObjectIdentifier HqcOidLookup(HqcParameters parameters)
         {
-            return hqcOids[parameters];
+            return CollectionUtilities.GetValueOrNull(hqcOids, parameters);
         }
 
         internal static HqcParameters HqcParamsLookup(DerObjectIdentifier oid)
         {
-            return hqcParams[oid];
+            return CollectionUtilities.GetValueOrNull(hqcParams, oid);
+        }
+
+        internal static DerObjectIdentifier SphincsPlusOidLookup(SphincsPlusParameters parameters)
+        {
+            return CollectionUtilities.GetValueOrNull(sphincsPlusOids, parameters);
+        }
+
+        internal static SphincsPlusParameters SphincsPlusParamsLookup(DerObjectIdentifier oid)
+        {
+            return CollectionUtilities.GetValueOrNull(sphincsPlusParams, oid);
         }
     }
 }

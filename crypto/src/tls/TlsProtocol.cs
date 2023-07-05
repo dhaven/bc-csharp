@@ -273,6 +273,8 @@ namespace Org.BouncyCastle.Tls
                 RaiseAlertWarning(AlertDescription.close_notify, "Connection closed");
 
                 CloseConnection();
+
+                TlsUtilities.NotifyConnectionClosed(Peer);
             }
         }
 
@@ -310,6 +312,8 @@ namespace Org.BouncyCastle.Tls
             }
 
             CloseConnection();
+
+            TlsUtilities.NotifyConnectionClosed(Peer);
         }
 
         /// <exception cref="IOException"/>

@@ -14,6 +14,7 @@ using Org.BouncyCastle.Pqc.Crypto.Cmce;
 using Org.BouncyCastle.Pqc.Crypto.Crystals.Dilithium;
 using Org.BouncyCastle.Pqc.Crypto.Crystals.Kyber;
 using Org.BouncyCastle.Pqc.Crypto.Falcon;
+using Org.BouncyCastle.Pqc.Crypto.Frodo;
 using Org.BouncyCastle.Pqc.Crypto.Hqc;
 using Org.BouncyCastle.Pqc.Crypto.Lms;
 using Org.BouncyCastle.Pqc.Crypto.Picnic;
@@ -33,11 +34,6 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
         static PqcPublicKeyFactory()
         {
             Converters[PkcsObjectIdentifiers.IdAlgHssLmsHashsig] = new LmsConverter();
-
-            Converters[BCObjectIdentifiers.sphincsPlus] = new SphincsPlusConverter();
-            Converters[BCObjectIdentifiers.sphincsPlus_shake_256] = new SphincsPlusConverter();
-            Converters[BCObjectIdentifiers.sphincsPlus_sha_256] = new SphincsPlusConverter();
-            Converters[BCObjectIdentifiers.sphincsPlus_sha_512] = new SphincsPlusConverter();
             
             Converters[BCObjectIdentifiers.mceliece348864_r3] = new CmceConverter();
             Converters[BCObjectIdentifiers.mceliece348864f_r3] = new CmceConverter();
@@ -49,7 +45,14 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
             Converters[BCObjectIdentifiers.mceliece6960119f_r3] = new CmceConverter();
             Converters[BCObjectIdentifiers.mceliece8192128_r3] = new CmceConverter();
             Converters[BCObjectIdentifiers.mceliece8192128f_r3] = new CmceConverter();
-           
+
+            Converters[BCObjectIdentifiers.frodokem640aes] = new FrodoConverter();
+            Converters[BCObjectIdentifiers.frodokem640shake] = new FrodoConverter();
+            Converters[BCObjectIdentifiers.frodokem976aes] = new FrodoConverter();
+            Converters[BCObjectIdentifiers.frodokem976shake] = new FrodoConverter();
+            Converters[BCObjectIdentifiers.frodokem1344aes] = new FrodoConverter();
+            Converters[BCObjectIdentifiers.frodokem1344shake] = new FrodoConverter();
+
             Converters[BCObjectIdentifiers.lightsaberkem128r3] = new SaberConverter();
             Converters[BCObjectIdentifiers.saberkem128r3] = new SaberConverter();
             Converters[BCObjectIdentifiers.firesaberkem128r3] = new SaberConverter();
@@ -118,6 +121,27 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
             Converters[BCObjectIdentifiers.hqc128] = new HqcConverter();
             Converters[BCObjectIdentifiers.hqc192] = new HqcConverter();
             Converters[BCObjectIdentifiers.hqc256] = new HqcConverter();
+
+
+            Converters[BCObjectIdentifiers.sphincsPlus] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_sha2_128s_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_sha2_128f_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_shake_128s_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_shake_128f_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_haraka_128s_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_haraka_128f_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_sha2_192s_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_sha2_192f_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_shake_192s_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_shake_192f_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_haraka_192s_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_haraka_192f_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_sha2_256s_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_sha2_256f_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_shake_256s_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_shake_256f_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_haraka_256s_r3] = new SphincsPlusConverter();
+            Converters[BCObjectIdentifiers.sphincsPlus_haraka_256f_r3] = new SphincsPlusConverter();
         }
 
         /// <summary> Create a public key from a SubjectPublicKeyInfo encoding</summary>
@@ -163,7 +187,7 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
             return converter.GetPublicKeyParameters(keyInfo, defaultParams);
         }
 
-        private abstract class SubjectPublicKeyInfoConverter
+        internal abstract class SubjectPublicKeyInfoConverter
         {
             internal abstract AsymmetricKeyParameter GetPublicKeyParameters(SubjectPublicKeyInfo keyInfo, object defaultParams);
         }
@@ -198,7 +222,7 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
             {
                 byte[] keyEnc = Asn1OctetString.GetInstance(keyInfo.ParsePublicKey()).GetOctets();
 
-                SphincsPlusParameters spParams = SphincsPlusParameters.GetParams((int)Pack.BE_To_UInt32(keyEnc, 0));
+                SphincsPlusParameters spParams = PqcUtilities.SphincsPlusParamsLookup(keyInfo.AlgorithmID.Algorithm);
 
                 return new SphincsPlusPublicKeyParameters(spParams, Arrays.CopyOfRange(keyEnc, 4, keyEnc.Length));
             }
@@ -214,6 +238,19 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
                 CmceParameters spParams = PqcUtilities.McElieceParamsLookup(keyInfo.AlgorithmID.Algorithm);
 
                 return new CmcePublicKeyParameters(spParams, keyEnc);
+            }
+        }
+
+        private class FrodoConverter
+            : SubjectPublicKeyInfoConverter
+        {
+            internal override AsymmetricKeyParameter GetPublicKeyParameters(SubjectPublicKeyInfo keyInfo, object defaultParams)
+            {
+                byte[] keyEnc = Asn1OctetString.GetInstance(keyInfo.ParsePublicKey()).GetOctets();
+
+                FrodoParameters fParams = PqcUtilities.FrodoParamsLookup(keyInfo.AlgorithmID.Algorithm);
+
+                return new FrodoPublicKeyParameters(fParams, keyEnc);
             }
         }
 
@@ -243,6 +280,7 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
                 return new PicnicPublicKeyParameters(picnicParams, keyEnc);
             }
         }
+
         [Obsolete("Will be removed")]
         private class SikeConverter
             : SubjectPublicKeyInfoConverter
@@ -256,21 +294,27 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
                 return new SikePublicKeyParameters(sikeParams, keyEnc);
             }
         }
-        private class DilithiumConverter
+
+        internal class DilithiumConverter
             : SubjectPublicKeyInfoConverter
         {
-            internal override AsymmetricKeyParameter GetPublicKeyParameters(SubjectPublicKeyInfo keyInfo, object defaultParams)
+            internal override AsymmetricKeyParameter GetPublicKeyParameters(SubjectPublicKeyInfo keyInfo,
+                object defaultParams)
             {
-                DilithiumParameters dilithiumParams = PqcUtilities.DilithiumParamsLookup(keyInfo.AlgorithmID.Algorithm);
+                var dilithiumParameters = PqcUtilities.DilithiumParamsLookup(keyInfo.AlgorithmID.Algorithm);
 
+                return GetPublicKeyParameters(dilithiumParameters, keyInfo.PublicKeyData);
+            }
+
+            internal static DilithiumPublicKeyParameters GetPublicKeyParameters(DilithiumParameters dilithiumParameters,
+                DerBitString publicKeyData)
+            {
                 try
                 {
-                    Asn1Object obj = keyInfo.ParsePublicKey();
-                    if (obj is Asn1Sequence)
+                    Asn1Object obj = Asn1Object.FromByteArray(publicKeyData.GetOctets());
+                    if (obj is Asn1Sequence keySeq)
                     {
-                        Asn1Sequence keySeq = Asn1Sequence.GetInstance(obj);
-
-                        return new DilithiumPublicKeyParameters(dilithiumParams,
+                        return new DilithiumPublicKeyParameters(dilithiumParameters,
                             Asn1OctetString.GetInstance(keySeq[0]).GetOctets(),
                             Asn1OctetString.GetInstance(keySeq[1]).GetOctets());
                     }
@@ -278,13 +322,13 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
                     {
                         byte[] encKey = Asn1OctetString.GetInstance(obj).GetOctets();
 
-                        return new DilithiumPublicKeyParameters(dilithiumParams, encKey);
+                        return new DilithiumPublicKeyParameters(dilithiumParameters, encKey);
                     }
                 }
                 catch (Exception)
                 {
-                    // raw encoding
-                    return new DilithiumPublicKeyParameters(dilithiumParams, keyInfo.PublicKeyData.GetOctets());
+                    // we're a raw encoding
+                    return new DilithiumPublicKeyParameters(dilithiumParameters, publicKeyData.GetOctets());
                 }
             }
         }

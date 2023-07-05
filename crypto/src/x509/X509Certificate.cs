@@ -364,17 +364,14 @@ namespace Org.BouncyCastle.X509
 
         public virtual int GetBasicConstraints()
         {
-            if (basicConstraints != null && basicConstraints.IsCA())
-            {
-                if (basicConstraints.PathLenConstraint == null)
-                {
-                    return int.MaxValue;
-                }
+            if (basicConstraints == null || !basicConstraints.IsCA())
+                return -1;
 
-                return basicConstraints.PathLenConstraint.IntValue;
-            }
+            var pathLenConstraint = basicConstraints.PathLenConstraintInteger;
+            if (pathLenConstraint == null)
+                return int.MaxValue;
 
-            return -1;
+            return pathLenConstraint.IntPositiveValueExact;
         }
 
         public virtual GeneralNames GetIssuerAlternativeNameExtension()

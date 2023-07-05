@@ -345,7 +345,7 @@ namespace Org.BouncyCastle.Tls
             if (!IsLegacyConnectionState())
                 throw new TlsFatalAlert(AlertDescription.internal_error);
 
-            if (securityParameters.IsResumedSession)
+            if (securityParameters.IsResumedSession && type != HandshakeType.hello_request)
             {
                 if (type != HandshakeType.finished || m_connectionState != CS_SERVER_HELLO)
                     throw new TlsFatalAlert(AlertDescription.unexpected_message);
@@ -1771,7 +1771,7 @@ namespace Org.BouncyCastle.Tls
             int bindersSize = null == m_clientBinders ? 0 : m_clientBinders.m_bindersSize;
 
             this.m_clientHello = new ClientHello(legacy_version, securityParameters.ClientRandom, legacy_session_id,
-                null, offeredCipherSuites, m_clientExtensions, bindersSize);
+                cookie: null, offeredCipherSuites, m_clientExtensions, bindersSize);
 
             SendClientHelloMessage();
         }

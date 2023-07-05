@@ -10,6 +10,7 @@ using Org.BouncyCastle.Pqc.Crypto.Cmce;
 using Org.BouncyCastle.Pqc.Crypto.Crystals.Dilithium;
 using Org.BouncyCastle.Pqc.Crypto.Crystals.Kyber;
 using Org.BouncyCastle.Pqc.Crypto.Falcon;
+using Org.BouncyCastle.Pqc.Crypto.Frodo;
 using Org.BouncyCastle.Pqc.Crypto.Hqc;
 using Org.BouncyCastle.Pqc.Crypto.Lms;
 using Org.BouncyCastle.Pqc.Crypto.Picnic;
@@ -57,24 +58,35 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
             }
             if (privateKey is SphincsPlusPrivateKeyParameters sphincsPlusPrivateKeyParameters)
             {
-                byte[] encoding = sphincsPlusPrivateKeyParameters.GetEncoded();
-                byte[] pubEncoding = sphincsPlusPrivateKeyParameters.GetEncodedPublicKey();
-
                 AlgorithmIdentifier algorithmIdentifier = new AlgorithmIdentifier(
                     PqcUtilities.SphincsPlusOidLookup(sphincsPlusPrivateKeyParameters.Parameters));
-                return new PrivateKeyInfo(algorithmIdentifier, new DerOctetString(encoding), attributes, pubEncoding);
+                SphincsPlusPublicKey spPub = new SphincsPlusPublicKey(sphincsPlusPrivateKeyParameters.GetPublicSeed(),
+                    sphincsPlusPrivateKeyParameters.GetRoot());
+                SphincsPlusPrivateKey spPriv = new SphincsPlusPrivateKey(0, sphincsPlusPrivateKeyParameters.GetSeed(),
+                    sphincsPlusPrivateKeyParameters.GetPrf(), spPub);
+
+                return new PrivateKeyInfo(algorithmIdentifier, spPriv, attributes);
             }
             if (privateKey is CmcePrivateKeyParameters cmcePrivateKeyParameters)
             {
                 byte[] encoding = cmcePrivateKeyParameters.GetEncoded();
-                AlgorithmIdentifier algorithmIdentifier =
-                    new AlgorithmIdentifier(PqcUtilities.McElieceOidLookup(cmcePrivateKeyParameters.Parameters));
+                AlgorithmIdentifier algorithmIdentifier = new AlgorithmIdentifier(
+                    PqcUtilities.McElieceOidLookup(cmcePrivateKeyParameters.Parameters));
 
                 CmcePublicKey CmcePub = new CmcePublicKey(cmcePrivateKeyParameters.ReconstructPublicKey());
                 CmcePrivateKey CmcePriv = new CmcePrivateKey(0, cmcePrivateKeyParameters.Delta,
                     cmcePrivateKeyParameters.C, cmcePrivateKeyParameters.G, cmcePrivateKeyParameters.Alpha,
                     cmcePrivateKeyParameters.S, CmcePub);
                 return new PrivateKeyInfo(algorithmIdentifier, CmcePriv, attributes);
+            }
+            if (privateKey is FrodoPrivateKeyParameters frodoPrivateKeyParameters)
+            {
+                byte[] encoding = frodoPrivateKeyParameters.GetEncoded();
+
+                AlgorithmIdentifier algorithmIdentifier = new AlgorithmIdentifier(
+                    PqcUtilities.FrodoOidLookup(frodoPrivateKeyParameters.Parameters));
+
+                return new PrivateKeyInfo(algorithmIdentifier, new DerOctetString(encoding), attributes);
             }
             if (privateKey is SaberPrivateKeyParameters saberPrivateKeyParameters)
             {
@@ -119,21 +131,17 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
             }
             if (privateKey is KyberPrivateKeyParameters kyberPrivateKeyParameters)
             {
-                Asn1EncodableVector v = new Asn1EncodableVector(4);
-                v.Add(new DerInteger(0));
-                v.Add(new DerOctetString(kyberPrivateKeyParameters.S));
-                v.Add(new DerOctetString(kyberPrivateKeyParameters.Hpk));
-                v.Add(new DerOctetString(kyberPrivateKeyParameters.Nonce));
-
                 AlgorithmIdentifier algorithmIdentifier = new AlgorithmIdentifier(
                     PqcUtilities.KyberOidLookup(kyberPrivateKeyParameters.Parameters));
 
-                Asn1EncodableVector vPub = new Asn1EncodableVector(2);
-                vPub.Add(new DerOctetString(kyberPrivateKeyParameters.T));
-                vPub.Add(new DerOctetString(kyberPrivateKeyParameters.Rho));
+#pragma warning disable CS0618 // Type or member is obsolete
+                KyberPublicKey kyberPub = new KyberPublicKey(kyberPrivateKeyParameters.GetT(),
+                    kyberPrivateKeyParameters.GetRho());
+#pragma warning restore CS0618 // Type or member is obsolete
+                KyberPrivateKey kyberPriv = new KyberPrivateKey(0, kyberPrivateKeyParameters.GetS(),
+                    kyberPrivateKeyParameters.GetHpk(), kyberPrivateKeyParameters.GetNonce(), kyberPub);
 
-                return new PrivateKeyInfo(algorithmIdentifier, new DerSequence(v), attributes,
-                    new DerSequence(vPub).GetEncoded());
+                return new PrivateKeyInfo(algorithmIdentifier, kyberPriv, attributes);
             }
             if (privateKey is DilithiumPrivateKeyParameters dilithiumPrivateKeyParameters)
             {
@@ -149,12 +157,9 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
                 AlgorithmIdentifier algorithmIdentifier = new AlgorithmIdentifier(
                     PqcUtilities.DilithiumOidLookup(dilithiumPrivateKeyParameters.Parameters));
 
-                Asn1EncodableVector vPub = new Asn1EncodableVector(2);
-                vPub.Add(new DerOctetString(dilithiumPrivateKeyParameters.Rho));
-                vPub.Add(new DerOctetString(dilithiumPrivateKeyParameters.T1));
+                DilithiumPublicKeyParameters pubParams = dilithiumPrivateKeyParameters.GetPublicKeyParameters();
 
-                return new PrivateKeyInfo(algorithmIdentifier, new DerSequence(v), attributes,
-                    new DerSequence(vPub).GetEncoded());
+                return new PrivateKeyInfo(algorithmIdentifier, new DerSequence(v), attributes, pubParams.GetEncoded());
             }
             if (privateKey is BikePrivateKeyParameters bikePrivateKeyParameters)
             {

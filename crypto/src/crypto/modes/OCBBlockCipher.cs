@@ -732,19 +732,7 @@ namespace Org.BouncyCastle.Crypto.Modes
 
         protected static int OCB_ntz(long x)
         {
-            if (x == 0)
-            {
-                return 64;
-            }
-
-            int n = 0;
-            ulong ux = (ulong)x;
-            while ((ux & 1UL) == 0UL)
-            {
-                ++n;
-                ux >>= 1;
-            }
-            return n;
+            return Longs.NumberOfTrailingZeros(x);
         }
 
         protected static int ShiftLeft(byte[] block, byte[] output)
@@ -762,10 +750,7 @@ namespace Org.BouncyCastle.Crypto.Modes
 
         protected static void Xor(byte[] block, byte[] val)
         {
-            for (int i = 15; i >= 0; --i)
-            {
-                block[i] ^= val[i];
-            }
+            Bytes.XorTo(16, val, block);
         }
     }
 }

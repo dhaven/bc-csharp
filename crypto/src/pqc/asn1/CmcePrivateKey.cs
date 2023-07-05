@@ -32,6 +32,11 @@ namespace Org.BouncyCastle.Pqc.Asn1
             return new CmcePrivateKey(Asn1Sequence.GetInstance(o));
         }
 
+        public static CmcePrivateKey GetInstance(Asn1TaggedObject taggedObject, bool declaredExplicit)
+        {
+            return GetInstance(Asn1Sequence.GetInstance(taggedObject, declaredExplicit));
+        }
+
         private int version;
         private byte[] delta;
         private byte[] c;
@@ -42,11 +47,10 @@ namespace Org.BouncyCastle.Pqc.Asn1
         
         public CmcePrivateKey(int version, byte[] delta, byte[] c, byte[] g, byte[] alpha, byte[] s, CmcePublicKey pubKey = null)
         {
-            this.version = version;
             if (version != 0)
-            {
-                 throw new Exception("unrecognized version");
-            }
+                throw new Exception("unrecognized version");
+
+            this.version = version;
             this.delta = Arrays.Clone(delta);
             this.c = Arrays.Clone(c);
             this.g = Arrays.Clone(g);
@@ -57,11 +61,10 @@ namespace Org.BouncyCastle.Pqc.Asn1
 
         private CmcePrivateKey(Asn1Sequence seq)
         {
-            version = DerInteger.GetInstance(seq[0]).Value.IntValue;
+            version = DerInteger.GetInstance(seq[0]).IntValueExact;
             if (version != 0)
-            {
                  throw new Exception("unrecognized version");
-            }
+
             delta = Arrays.Clone(Asn1OctetString.GetInstance(seq[1]).GetOctets());
 
             c = Arrays.Clone(Asn1OctetString.GetInstance(seq[2]).GetOctets());
@@ -72,8 +75,7 @@ namespace Org.BouncyCastle.Pqc.Asn1
 
             s = Arrays.Clone(Asn1OctetString.GetInstance(seq[5]).GetOctets());
 
-            // todo optional publickey
-            if(seq.Count == 7)
+            if (seq.Count == 7)
             {
                 publicKey = CmcePublicKey.GetInstance(seq[6]);
             }

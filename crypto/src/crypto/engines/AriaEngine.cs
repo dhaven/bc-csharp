@@ -257,6 +257,7 @@ namespace Org.BouncyCastle.Crypto.Engines
             A(D);
         }
 
+        // TODO[api] Make private and take a KeyParameter instead
         protected static byte[][] KeySchedule(bool forEncryption, byte[] K)
         {
             int keyLen = K.Length;
@@ -432,10 +433,7 @@ namespace Org.BouncyCastle.Crypto.Engines
 
         protected static void Xor(byte[] z, byte[] x)
         {
-            for (int i = 0; i < 16; ++i)
-            {
-                z[i] ^= x[i];
-            }
+            Bytes.XorTo(16, x, z);
         }
     }
 }

@@ -3,6 +3,7 @@
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Modes;
 using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Utilities;
 
 namespace Org.BouncyCastle.Tls.Crypto.Impl.BC
 {
@@ -58,9 +59,19 @@ namespace Org.BouncyCastle.Tls.Crypto.Impl.BC
             return len;
         }
 
+        public virtual int DoFinal(byte[] additionalData, byte[] input, int inputOffset, int inputLength, byte[] output,
+            int outputOffset)
+        {
+            if (!Arrays.IsNullOrEmpty(additionalData))
+            {
+                m_cipher.ProcessAadBytes(additionalData, 0, additionalData.Length);
+            }
+
+            return DoFinal(input, inputOffset, inputLength, output, outputOffset);
+        }
+
         public void Reset()
         {
-            m_cipher.Reset();
         }
     }
 }

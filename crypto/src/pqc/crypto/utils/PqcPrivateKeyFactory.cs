@@ -14,6 +14,7 @@ using Org.BouncyCastle.Pqc.Crypto.Cmce;
 using Org.BouncyCastle.Pqc.Crypto.Crystals.Dilithium;
 using Org.BouncyCastle.Pqc.Crypto.Crystals.Kyber;
 using Org.BouncyCastle.Pqc.Crypto.Falcon;
+using Org.BouncyCastle.Pqc.Crypto.Frodo;
 using Org.BouncyCastle.Pqc.Crypto.Hqc;
 using Org.BouncyCastle.Pqc.Crypto.Lms;
 using Org.BouncyCastle.Pqc.Crypto.Picnic;
@@ -50,10 +51,10 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
         /// <exception cref="IOException"> on an error decoding the key</exception>
         public static AsymmetricKeyParameter CreateKey(PrivateKeyInfo keyInfo)
         {
-            AlgorithmIdentifier algId = keyInfo.PrivateKeyAlgorithm;
-            DerObjectIdentifier algOID = algId.Algorithm;
+            AlgorithmIdentifier algID = keyInfo.PrivateKeyAlgorithm;
+            DerObjectIdentifier algOid = algID.Algorithm;
 
-            if (algOID.Equals(PkcsObjectIdentifiers.IdAlgHssLmsHashsig))
+            if (algOid.Equals(PkcsObjectIdentifiers.IdAlgHssLmsHashsig))
             {
                 byte[] keyEnc = Asn1OctetString.GetInstance(keyInfo.ParsePrivateKey()).GetOctets();
                 DerBitString pubKey = keyInfo.PublicKeyData;
@@ -71,47 +72,56 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
                     return LmsPrivateKeyParameters.GetInstance(Arrays.CopyOfRange(keyEnc, 4, keyEnc.Length));
                 }
             }
-            if (algOID.On(BCObjectIdentifiers.pqc_kem_mceliece))
+            if (algOid.On(BCObjectIdentifiers.pqc_kem_mceliece))
             {
                 CmcePrivateKey cmceKey = CmcePrivateKey.GetInstance(keyInfo.ParsePrivateKey());
-                CmceParameters spParams = PqcUtilities.McElieceParamsLookup(keyInfo.PrivateKeyAlgorithm.Algorithm);
+                CmceParameters spParams = PqcUtilities.McElieceParamsLookup(algOid);
 
                 return new CmcePrivateKeyParameters(spParams, cmceKey.Delta, cmceKey.C, cmceKey.G, cmceKey.Alpha, cmceKey.S);
             }
-            if (algOID.On(BCObjectIdentifiers.sphincsPlus))
+            if (algOid.On(BCObjectIdentifiers.pqc_kem_frodo))
             {
                 byte[] keyEnc = Asn1OctetString.GetInstance(keyInfo.ParsePrivateKey()).GetOctets();
-                SphincsPlusParameters spParams = SphincsPlusParameters.GetParams(BigInteger.ValueOf(Pack.BE_To_UInt32(keyEnc, 0)).IntValue);
+                FrodoParameters spParams = PqcUtilities.FrodoParamsLookup(algOid);
 
-                return new SphincsPlusPrivateKeyParameters(spParams, Arrays.CopyOfRange(keyEnc, 4, keyEnc.Length));
+                return new FrodoPrivateKeyParameters(spParams, keyEnc);
             }
-            if (algOID.On(BCObjectIdentifiers.pqc_kem_saber))
+            if (algOid.On(BCObjectIdentifiers.sphincsPlus))
+            {
+                SphincsPlusPrivateKey spKey = SphincsPlusPrivateKey.GetInstance(keyInfo.ParsePrivateKey());
+                SphincsPlusParameters spParams = PqcUtilities.SphincsPlusParamsLookup(algOid);
+                SphincsPlusPublicKey publicKey = spKey.PublicKey;
+
+                return new SphincsPlusPrivateKeyParameters(spParams, spKey.GetSkseed(), spKey.GetSkprf(),
+                    publicKey.GetPkseed(), publicKey.GetPkroot());
+            }
+            if (algOid.On(BCObjectIdentifiers.pqc_kem_saber))
             {
                 byte[] keyEnc = Asn1OctetString.GetInstance(keyInfo.ParsePrivateKey()).GetOctets();
-                SaberParameters spParams = PqcUtilities.SaberParamsLookup(keyInfo.PrivateKeyAlgorithm.Algorithm);
+                SaberParameters spParams = PqcUtilities.SaberParamsLookup(algOid);
 
                 return new SaberPrivateKeyParameters(spParams, keyEnc);
             }
-            if (algOID.On(BCObjectIdentifiers.picnic))
+            if (algOid.On(BCObjectIdentifiers.picnic))
             {
                 byte[] keyEnc = Asn1OctetString.GetInstance(keyInfo.ParsePrivateKey()).GetOctets();
-                PicnicParameters picnicParams = PqcUtilities.PicnicParamsLookup(keyInfo.PrivateKeyAlgorithm.Algorithm);
+                PicnicParameters picnicParams = PqcUtilities.PicnicParamsLookup(algOid);
 
                 return new PicnicPrivateKeyParameters(picnicParams, keyEnc);
             }
 #pragma warning disable CS0618 // Type or member is obsolete
-            if (algOID.On(BCObjectIdentifiers.pqc_kem_sike))
+            if (algOid.On(BCObjectIdentifiers.pqc_kem_sike))
             {
                 byte[] keyEnc = Asn1OctetString.GetInstance(keyInfo.ParsePrivateKey()).GetOctets();
-                SikeParameters sikeParams = PqcUtilities.SikeParamsLookup(keyInfo.PrivateKeyAlgorithm.Algorithm);
+                SikeParameters sikeParams = PqcUtilities.SikeParamsLookup(algOid);
 
                 return new SikePrivateKeyParameters(sikeParams, keyEnc);
             }
 #pragma warning restore CS0618 // Type or member is obsolete
-            if (algOID.On(BCObjectIdentifiers.pqc_kem_bike))
+            if (algOid.On(BCObjectIdentifiers.pqc_kem_bike))
             {
                 byte[] keyEnc = Asn1OctetString.GetInstance(keyInfo.ParsePrivateKey()).GetOctets();
-                BikeParameters bikeParams = PqcUtilities.BikeParamsLookup(keyInfo.PrivateKeyAlgorithm.Algorithm);
+                BikeParameters bikeParams = PqcUtilities.BikeParamsLookup(algOid);
 
                 byte[] h0 = Arrays.CopyOfRange(keyEnc, 0, bikeParams.RByte);
                 byte[] h1 = Arrays.CopyOfRange(keyEnc, bikeParams.RByte, 2 * bikeParams.RByte);
@@ -119,96 +129,72 @@ namespace Org.BouncyCastle.Pqc.Crypto.Utilities
 
                 return new BikePrivateKeyParameters(bikeParams, h0, h1, sigma);
             }
-            if (algOID.On(BCObjectIdentifiers.pqc_kem_hqc))
+            if (algOid.On(BCObjectIdentifiers.pqc_kem_hqc))
             {
                 byte[] keyEnc = Asn1OctetString.GetInstance(keyInfo.ParsePrivateKey()).GetOctets();
-                HqcParameters hqcParams = PqcUtilities.HqcParamsLookup(keyInfo.PrivateKeyAlgorithm.Algorithm);
+                HqcParameters hqcParams = PqcUtilities.HqcParamsLookup(algOid);
 
                 return new HqcPrivateKeyParameters(hqcParams, keyEnc);
             }
-            if (algOID.Equals(BCObjectIdentifiers.kyber512)
-                || algOID.Equals(BCObjectIdentifiers.kyber512_aes)
-                || algOID.Equals(BCObjectIdentifiers.kyber768)
-                || algOID.Equals(BCObjectIdentifiers.kyber768_aes)
-                || algOID.Equals(BCObjectIdentifiers.kyber1024)
-                || algOID.Equals(BCObjectIdentifiers.kyber1024_aes))
+            if (algOid.On(BCObjectIdentifiers.pqc_kem_kyber))
             {
-                Asn1Sequence keyEnc = Asn1Sequence.GetInstance(keyInfo.ParsePrivateKey());
+                KyberPrivateKey kyberKey = KyberPrivateKey.GetInstance(keyInfo.ParsePrivateKey());
+                KyberParameters kyberParams = PqcUtilities.KyberParamsLookup(algOid);
 
-                KyberParameters spParams = PqcUtilities.KyberParamsLookup(keyInfo.PrivateKeyAlgorithm.Algorithm);
-
-                int version = DerInteger.GetInstance(keyEnc[0]).Value.IntValue;
-                if (version != 0)
+#pragma warning disable CS0618 // Type or member is obsolete
+                KyberPublicKey pubKey = kyberKey.PublicKey;
+#pragma warning restore CS0618 // Type or member is obsolete
+                if (pubKey != null)
                 {
-                    throw new IOException("unknown private key version: " + version);
+                    return new KyberPrivateKeyParameters(kyberParams, kyberKey.GetS(), kyberKey.GetHpk(),
+                        kyberKey.GetNonce(), pubKey.T, pubKey.Rho);
                 }
- 
-                if (keyInfo.PublicKeyData != null)
-                {
-                    Asn1Sequence pubKey = Asn1Sequence.GetInstance(keyInfo.PublicKeyData.GetOctets());
-                    return new KyberPrivateKeyParameters(spParams,
-                        Asn1OctetString.GetInstance(keyEnc[1]).GetDerEncoded(), 
-                        Asn1OctetString.GetInstance(keyEnc[2]).GetOctets(), 
-                        Asn1OctetString.GetInstance(keyEnc[3]).GetOctets(),
-                        Asn1OctetString.GetInstance(pubKey[0]).GetOctets(), // t
-                        Asn1OctetString.GetInstance(pubKey[1]).GetOctets()); // rho
-                }
-                else
-                {
-                    return new KyberPrivateKeyParameters(spParams,
-                        Asn1OctetString.GetInstance(keyEnc[1]).GetOctets(),
-                        Asn1OctetString.GetInstance(keyEnc[2]).GetOctets(),
-                        Asn1OctetString.GetInstance(keyEnc[3]).GetOctets(),
-                        null,
-                        null);
-                }
+                return new KyberPrivateKeyParameters(kyberParams, kyberKey.GetS(), kyberKey.GetHpk(),
+                    kyberKey.GetNonce(), null, null);
             }
-            if (algOID.Equals(BCObjectIdentifiers.dilithium2)
-                || algOID.Equals(BCObjectIdentifiers.dilithium3)
-                || algOID.Equals(BCObjectIdentifiers.dilithium5)
-                || algOID.Equals(BCObjectIdentifiers.dilithium2_aes)
-                || algOID.Equals(BCObjectIdentifiers.dilithium3_aes)
-                || algOID.Equals(BCObjectIdentifiers.dilithium5_aes))
+            if (algOid.Equals(BCObjectIdentifiers.dilithium2) ||
+                algOid.Equals(BCObjectIdentifiers.dilithium3) ||
+                algOid.Equals(BCObjectIdentifiers.dilithium5) ||
+                algOid.Equals(BCObjectIdentifiers.dilithium2_aes) ||
+                algOid.Equals(BCObjectIdentifiers.dilithium3_aes) ||
+                algOid.Equals(BCObjectIdentifiers.dilithium5_aes))
             {
                 Asn1Sequence keyEnc = Asn1Sequence.GetInstance(keyInfo.ParsePrivateKey());
 
-                DilithiumParameters spParams = PqcUtilities.DilithiumParamsLookup(keyInfo.PrivateKeyAlgorithm.Algorithm);
+                DilithiumParameters spParams = PqcUtilities.DilithiumParamsLookup(algOid);
 
-                int version = DerInteger.GetInstance(keyEnc[0]).Value.IntValue;
+                int version = DerInteger.GetInstance(keyEnc[0]).IntValueExact;
                 if (version != 0)
                     throw new IOException("unknown private key version: " + version);
 
-                if (keyInfo.PublicKeyData != null)
+                byte[] t1 = null;
+
+                DerBitString publicKeyData = keyInfo.PublicKeyData;
+                if (publicKeyData != null)
                 {
-                    Asn1Sequence pubKey = Asn1Sequence.GetInstance(keyInfo.PublicKeyData.GetOctets());
-                    return new DilithiumPrivateKeyParameters(spParams,
-                        DerBitString.GetInstance(keyEnc[1]).GetOctets(),
-                        DerBitString.GetInstance(keyEnc[2]).GetOctets(),
-                        DerBitString.GetInstance(keyEnc[3]).GetOctets(),
-                        DerBitString.GetInstance(keyEnc[4]).GetOctets(),
-                        DerBitString.GetInstance(keyEnc[5]).GetOctets(),
-                        DerBitString.GetInstance(keyEnc[6]).GetOctets(),
-                        Asn1OctetString.GetInstance(pubKey[1]).GetOctets()); // encT1
+                    var pubParams = PqcPublicKeyFactory.DilithiumConverter.GetPublicKeyParameters(spParams,
+                        publicKeyData);
+
+                    t1 = pubParams.GetT1();
                 }
-                else
-                {
-                    return new DilithiumPrivateKeyParameters(spParams,
-                        DerBitString.GetInstance(keyEnc[1]).GetOctets(),
-                        DerBitString.GetInstance(keyEnc[2]).GetOctets(),
-                        DerBitString.GetInstance(keyEnc[3]).GetOctets(),
-                        DerBitString.GetInstance(keyEnc[4]).GetOctets(),
-                        DerBitString.GetInstance(keyEnc[5]).GetOctets(),
-                        DerBitString.GetInstance(keyEnc[6]).GetOctets(),
-                        null);
-                }
+
+                return new DilithiumPrivateKeyParameters(spParams,
+                    DerBitString.GetInstance(keyEnc[1]).GetOctets(),
+                    DerBitString.GetInstance(keyEnc[2]).GetOctets(),
+                    DerBitString.GetInstance(keyEnc[3]).GetOctets(),
+                    DerBitString.GetInstance(keyEnc[4]).GetOctets(),
+                    DerBitString.GetInstance(keyEnc[5]).GetOctets(),
+                    DerBitString.GetInstance(keyEnc[6]).GetOctets(),
+                    t1); // encT1
             }
-            if (algOID.Equals(BCObjectIdentifiers.falcon_512) || algOID.Equals(BCObjectIdentifiers.falcon_1024))
+            if (algOid.Equals(BCObjectIdentifiers.falcon_512) ||
+                algOid.Equals(BCObjectIdentifiers.falcon_1024))
             {
                 Asn1Sequence keyEnc = Asn1Sequence.GetInstance(keyInfo.ParsePrivateKey());
-                FalconParameters spParams = PqcUtilities.FalconParamsLookup(keyInfo.PrivateKeyAlgorithm.Algorithm);
+                FalconParameters spParams = PqcUtilities.FalconParamsLookup(algOid);
                     
                 DerBitString publicKeyData = keyInfo.PublicKeyData;
-                int version = DerInteger.GetInstance(keyEnc[0]).Value.IntValue;
+                int version = DerInteger.GetInstance(keyEnc[0]).IntValueExact;
                 if (version != 1)
                     throw new IOException("unknown private key version: " + version);
 
