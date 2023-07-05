@@ -20,7 +20,7 @@ namespace Org.BouncyCastle.Bcpg.OpenPgp
     {
         private PublicKeyEncSessionPacket keyData;
 
-		internal PgpPublicKeyEncryptedData(
+		public PgpPublicKeyEncryptedData(
             PublicKeyEncSessionPacket	keyData,
             InputStreamPacket			encData)
             : base(encData)
@@ -185,7 +185,7 @@ namespace Org.BouncyCastle.Bcpg.OpenPgp
             }
 		}
 
-        private byte[] RecoverSessionData(PgpPrivateKey privKey)
+        public byte[] RecoverSessionData(PgpPrivateKey privKey)
 		{
             byte[][] secKeyData = keyData.GetEncSessionKey();
 

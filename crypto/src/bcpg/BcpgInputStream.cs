@@ -13,7 +13,7 @@ namespace Org.BouncyCastle.Bcpg
         private bool next = false;
         private int nextB;
 
-        internal static BcpgInputStream Wrap(Stream inStr)
+        public static BcpgInputStream Wrap(Stream inStr)
         {
             if (inStr is BcpgInputStream bcpg)
                 return bcpg;

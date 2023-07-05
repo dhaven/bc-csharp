@@ -25,7 +25,7 @@ namespace Org.BouncyCastle.Bcpg.OpenPgp
         {
         }
 
-        internal PgpPublicKeyRing(IList<PgpPublicKey> pubKeys)
+        public PgpPublicKeyRing(IList<PgpPublicKey> pubKeys)
         {
             this.keys = pubKeys;
         }
